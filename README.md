@@ -13,9 +13,9 @@ A beautiful and modern Flutter application designed to manage internship program
 
 ## 📱 Screenshots
 
-| Login Screen | Programs Screen |
-|---------------|----------------|
-| <img src="assets/Screenshots/Login.jpeg" width="250"> | <img src="assets/Screenshots/Login.jpeg" width="250"> |
+| Login Screen | Programs Screen                                      |
+|---------------|------------------------------------------------------|
+| <img src="assets/Screenshots/Login.jpeg" width="250"> | <img src="assets/Screenshots/home.jpeg" width="250"> |
 
 | Profile Screen | Program details Screen                                         |
 |----------------|----------------------------------------------------------------|
