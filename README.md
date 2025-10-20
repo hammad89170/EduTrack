@@ -1,16 +1,38 @@
-# edu_track
+# 🌟 Flutter Internship Management App
 
-A new Flutter project.
+A beautiful and modern Flutter application designed to manage internship programs, profiles, and progress tracking.
 
-## Getting Started
+## 🚀 Features
+- 🔐 User Login & Signup
+- 👤 Interactive Profile Page
+- 📚 Internship Programs List
+- 📈 Progress Tracking
+- 🎨 Gradient AppBars and Smooth UI
 
-This project is a starting point for a Flutter application.
+---
 
-A few resources to get you started if this is your first Flutter project:
+## 📱 Screenshots
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+| Login Screen | Programs Screen |
+|---------------|----------------|
+| <img src="assets/Screenshots/Login.jpeg" width="250"> | <img src="assets/Screenshots/Login.jpeg" width="250"> |
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+| Profile Screen | Program details Screen                                         |
+|----------------|----------------------------------------------------------------|
+| <img src="assets/Screenshots/profile.jpeg" width="250"> | <img src="assets/Screenshots/details.jpeg" width="250"> |
+
+---
+
+## 🛠 Tech Stack
+- Flutter (Dart)
+- Material Design
+- Responsive UI
+
+---
+
+## 💻 Setup
+```bash
+git clone https://github.com/hammad89170/Edutrack.git
+cd Edutrack
+flutter pub get
+flutter run
