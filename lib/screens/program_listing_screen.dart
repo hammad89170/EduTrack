@@ -1,152 +1,266 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class ProgramListScreen extends StatelessWidget {
-  const ProgramListScreen({Key? key}) : super(key: key);
+class ProgramListingScreen extends StatefulWidget {
+  const ProgramListingScreen({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> programs = [
-      {
-        "title": "AI Basics",
-        "logo": "assets/images/networking.png",
-        "description": "Learn the fundamentals of Artificial Intelligence.",
-        "progress": 0.6,
-      },
-      {
-        "title": "Networking 101",
-        "logo": "assets/images/networking.png",
-        "description": "Understand the basics of networking and protocols.",
-        "progress": 0.3,
-      },
-      {
-        "title": "Web Development",
-        "logo": "assets/images/web logo.png",
-        "description": "Build responsive websites using HTML, CSS, and JS.",
-        "progress": null, // not enrolled
-      },
-      {
-        "title": "Cyber Security Essentials",
-        "logo": "assets/images/networking.png",
-        "description": "Protect systems and data from security threats.",
-        "progress": 0.75,
-      },
-      {
-        "title": "Cloud Computing",
-        "logo": "assets/images/networking.png",
-        "description": "Learn about AWS, Azure, and cloud infrastructures.",
-        "progress": null, // not enrolled
-      },
-      {
-        "title": "Data Science Bootcamp",
-        "logo": "assets/images/networking.png",
-        "description": "Master data analysis, visualization, and ML basics.",
-        "progress": 0.45,
-      },
-    ];
+  State<ProgramListingScreen> createState() => _ProgramListingScreenState();
+}
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          "Programs",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+class _ProgramListingScreenState extends State<ProgramListingScreen> {
+  List<dynamic> allPrograms = [];
+  List<dynamic> enrolledPrograms = [];
+  List<dynamic> availablePrograms = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    loadPrograms();
+  }
+
+  Future<void> loadPrograms() async {
+    await fetchPrograms();
+    await loadEnrolledPrograms();
+    separatePrograms();
+  }
+
+  Future<void> fetchPrograms() async {
+    setState(() => isLoading = true);
+    final response = await http.get(
+      Uri.parse('https://mocki.io/v1/f637b121-9609-44c4-98e7-1e958edd3963'),
+    );
+
+    if (response.statusCode == 200) {
+      setState(() {
+        allPrograms = jsonDecode(response.body);
+      });
+    }
+    setState(() => isLoading = false);
+  }
+
+  Future<void> loadEnrolledPrograms() async {
+    final prefs = await SharedPreferences.getInstance();
+    final enrolledIds = prefs.getStringList('enrolledPrograms') ?? [];
+    enrolledPrograms = allPrograms
+        .where((p) => enrolledIds.contains(p['id'].toString()))
+        .toList();
+  }
+
+  Future<void> saveEnrolledPrograms() async {
+    final prefs = await SharedPreferences.getInstance();
+    final enrolledIds = enrolledPrograms.map((p) => p['id'].toString()).toList();
+    await prefs.setStringList('enrolledPrograms', enrolledIds);
+  }
+
+  void separatePrograms() {
+    setState(() {
+      availablePrograms = allPrograms
+          .where((p) => !enrolledPrograms.any((e) => e['id'] == p['id']))
+          .toList();
+    });
+  }
+
+  void joinProgram(dynamic program) async {
+    setState(() {
+      availablePrograms.remove(program);
+      enrolledPrograms.add(program);
+    });
+    await saveEnrolledPrograms();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('You have joined "${program['title']}" successfully! 🎉'),
+        backgroundColor: Colors.blue,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void removeProgram(dynamic program) async {
+    setState(() {
+      enrolledPrograms.remove(program);
+      availablePrograms.add(program);
+    });
+    await saveEnrolledPrograms();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('You have left "${program['title']}" program.'),
+        backgroundColor: Colors.redAccent,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Widget buildProgramCard(dynamic program, {bool showJoinButton = false, bool showRemoveButton = false}) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.15),
+            blurRadius: 10,
+            spreadRadius: 2,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              program['title'],
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 17,
+                color: Colors.blue,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              program['description'],
+              style: const TextStyle(color: Colors.black87, fontSize: 14),
+            ),
+            const SizedBox(height: 10),
+            if (showRemoveButton || !showJoinButton)
+              LinearProgressIndicator(
+                value: (program['progress'] ?? 0) * 1.0,
+                color: Colors.blue,
+                backgroundColor: Colors.blue.shade100,
+              ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (showJoinButton)
+                  ElevatedButton.icon(
+                    onPressed: () => joinProgram(program),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    icon: const Icon(Icons.school, size: 18),
+                    label: const Text("Join Now"),
+                  ),
+                if (showRemoveButton)
+                  ElevatedButton.icon(
+                    onPressed: () => removeProgram(program),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    icon: const Icon(Icons.delete, size: 18),
+                    label: const Text("Remove"),
+                  ),
+              ],
+            ),
+          ],
         ),
-        centerTitle: true,
-        backgroundColor: const Color(0xFF2193b0),
-        elevation: 6,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(30),
-            bottomRight: Radius.circular(30),
+      ),
+    );
+  }
+
+  PreferredSizeWidget buildGradientAppBar() {
+    return AppBar(
+      title: const Text("Programs"),
+      centerTitle: true,
+      flexibleSpace: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF2193b0), Color(0xFF6dd5ed)],
+            begin: Alignment.bottomLeft,
+            end: Alignment.topRight,
           ),
         ),
       ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(50),
+          bottomRight: Radius.circular(50),
+        ),
+      ),
+      elevation: 10,
+    );
+  }
 
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ListView.builder(
-          itemCount: programs.length,
-          itemBuilder: (context, index) {
-            final program = programs[index];
-            final bool isEnrolled = program["progress"] != null;
+  Widget shimmerLoader() {
+    return ListView.builder(
+      itemCount: 5,
+      itemBuilder: (_, __) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Container(
+          height: 80,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade300,
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+    );
+  }
 
-            return Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              margin: const EdgeInsets.only(bottom: 16),
-              elevation: 4,
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Image.asset(
-                      program["logo"],
-                      height: 60,
-                      width: 60,
-                      fit: BoxFit.contain,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            program["title"],
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            program["description"],
-                            style: const TextStyle(fontSize: 14, color: Colors.grey),
-                          ),
-                          const SizedBox(height: 10),
-
-                          // Show progress bar or join button based on enrollment
-                          if (isEnrolled) ...[
-                            LinearProgressIndicator(
-                              value: program["progress"],
-                              backgroundColor: Colors.blue.shade100,
-                              color: const Color(0xFF2193b0),
-                              borderRadius: BorderRadius.circular(10),
-                              minHeight: 8,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              "${((program["progress"] as double) * 100).toInt()}% Completed",
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.black54,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ] else
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF2193b0),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                onPressed: () {
-                                  // TODO: Navigate to program details
-                                },
-                                child: const Text("Join Now"),
-                              ),
-                            ),
-                        ],
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: buildGradientAppBar(),
+      body: isLoading
+          ? shimmerLoader()
+          : RefreshIndicator(
+        onRefresh: loadPrograms,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (enrolledPrograms.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  const Center(
+                    child: Text(
+                      "🎓 Enrolled Programs",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ],
+                  ),
+                  const SizedBox(height: 8),
+                  ...enrolledPrograms
+                      .map((p) => buildProgramCard(p, showRemoveButton: true))
+                      .toList(),
+                  const Divider(height: 30),
+                ],
+                const Center(
+                  child: Text(
+                    "📚 Available Programs",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-              ),
-            );
-          },
+                const SizedBox(height: 8),
+                ...availablePrograms
+                    .map((p) => buildProgramCard(p, showJoinButton: true))
+                    .toList(),
+              ],
+            ),
+          ),
         ),
       ),
     );
